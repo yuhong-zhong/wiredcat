@@ -43,10 +43,11 @@ struct workload_thread_context : public thread_context {
 	float read_ratio;
 	long nr_op;
 
-	long nr_read;
-	long nr_write;
+	volatile long nr_read;
+	volatile long nr_write;
 	steady_clock::time_point start_time;
 	steady_clock::time_point end_time;
+	volatile bool finished;
 };
 
 enum {
@@ -144,6 +145,7 @@ void workload_thread_fn(struct workload_thread_context *context) {
 	}
 	context->end_time = steady_clock::now();
 	session->close(session, NULL);
+	context->finished = true;
 }
 
 int main(int argc, char *argv[]) {
@@ -221,10 +223,42 @@ int main(int argc, char *argv[]) {
 		context->nr_op = nr_op;
 		context->nr_read = 0;
 		context->nr_write = 0;
+		context->finished = false;
 	}
 	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
 		workload_context_arr[thread_index].thread_v = thread(workload_thread_fn, &workload_context_arr[thread_index]);
 	}
+
+	/* display real-time perf */
+	long prev_nr_read = 0, prev_nr_write = 0;
+	steady_clock::time_point prev_visit_time = steady_clock::now();
+	for (;;) {
+		long cur_nr_read = 0, cur_nr_write = 0;
+		bool all_finished = true;
+		for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
+			struct workload_thread_context *context = &workload_context_arr[thread_index];
+			cur_nr_read += context->nr_read;
+			cur_nr_write += context->nr_write;
+			all_finished = all_finished && context->finished;
+		}
+
+		steady_clock::time_point cur_visit_time = steady_clock::now();
+		long duration = duration_cast<milliseconds>(cur_visit_time - prev_visit_time).count();
+		double cur_read_throughput = 1000 * (double)(cur_nr_read - prev_nr_read) / duration;
+		double cur_write_throughput = 1000 * (double)(cur_nr_write - prev_nr_write) / duration;
+		printf("Read Throughput: %.2lf op/sec, Write Throughput: %.2lf op/sec, Total Throughput: %.2lf op/sec\n",
+		       cur_read_throughput, cur_write_throughput, cur_read_throughput + cur_write_throughput);
+
+		prev_nr_read = cur_nr_read;
+		prev_nr_write = cur_nr_write;
+		prev_visit_time = cur_visit_time;
+
+		if (all_finished)
+			break;
+		this_thread::sleep_for(chrono::seconds(1));
+	}
+
+	/* display overall perf */
 	double read_throughput = 0;
 	double write_throughput = 0;
 	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
@@ -234,6 +268,6 @@ int main(int argc, char *argv[]) {
 		read_throughput += 1000 * (double)context->nr_read / duration;
 		write_throughput += 1000 * (double)context->nr_write / duration;
 	}
-	printf("Read Throughput: %.2lf op/sec, Write Throughput: %.2lf op/sec, Total Throughput: %.2lf op/sec\n",
+	printf("Overall Read Throughput: %.2lf op/sec, Overall Write Throughput: %.2lf op/sec, Overall Total Throughput: %.2lf op/sec\n",
 	       read_throughput, write_throughput, read_throughput + write_throughput);
 }
