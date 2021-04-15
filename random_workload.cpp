@@ -36,6 +36,7 @@ struct thread_context {
 struct init_thread_context : public thread_context {
 	long start_key;
 	long end_key;
+	volatile long cur_key;
 };
 
 struct workload_thread_context : public thread_context {
@@ -85,7 +86,7 @@ void init_thread_fn(struct init_thread_context *context) {
 	unsigned int seed = context->thread_index + 'i';
 	char *key_buffer = (char *) malloc(BUFFER_SIZE);
 	char *value_buffer = (char *) malloc(BUFFER_SIZE);
-	for (long i = context->start_key; i < context->end_key; ++i) {
+	for (long i = context->start_key; i < context->end_key; ++i, ++context->cur_key) {
 		sprintf(key_buffer, "%ld", i);
 		generate_random_string((uint8_t *) value_buffer, context->value_size, &seed);
 		cursor->set_key(cursor, key_buffer);
@@ -199,12 +200,33 @@ int main(int argc, char *argv[]) {
 
 		context->start_key = entry_per_thread * thread_index;
 		context->end_key = min(nr_entry, entry_per_thread * (thread_index + 1));
+		context->cur_key = context->start_key;
 	}
 	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
 		init_context_arr[thread_index].thread_v = thread(init_thread_fn, &init_context_arr[thread_index]);
 	}
-	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
-		init_context_arr[thread_index].thread_v.join();
+	/* display real-time progress */
+	long prev_nr_entry = 0;
+	steady_clock::time_point prev_check_time = steady_clock::now();
+	this_thread::sleep_for(chrono::seconds(1));
+	for (;;) {
+		long cur_nr_entry = 0;
+		for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
+			struct init_thread_context *context = &init_context_arr[thread_index];
+			cur_nr_entry += (context->cur_key - context->start_key);
+		}
+		steady_clock::time_point cur_check_time = steady_clock::now();
+		long duration = duration_cast<milliseconds>(cur_check_time - prev_check_time).count();
+		double cur_insert_throughput = 1000 * (double)(cur_nr_entry - prev_nr_entry) / duration;
+		double progress = (double) cur_nr_entry / nr_entry;
+		printf("populating progress: %.2f, insert throughput: %.2f\n", progress * 100, cur_insert_throughput);
+		prev_nr_entry = cur_nr_entry;
+		prev_check_time = cur_check_time;
+
+		if (cur_nr_entry == nr_entry) {
+			break;
+		}
+		this_thread::sleep_for(chrono::seconds(1));
 	}
 	printf("database populated\n");
 
@@ -232,6 +254,7 @@ int main(int argc, char *argv[]) {
 	/* display real-time perf */
 	long prev_nr_read = 0, prev_nr_write = 0;
 	steady_clock::time_point prev_visit_time = steady_clock::now();
+	this_thread::sleep_for(chrono::seconds(1));
 	for (;;) {
 		long cur_nr_read = 0, cur_nr_write = 0;
 		bool all_finished = true;
