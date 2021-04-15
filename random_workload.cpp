@@ -219,7 +219,7 @@ int main(int argc, char *argv[]) {
 		long duration = duration_cast<milliseconds>(cur_check_time - prev_check_time).count();
 		double cur_insert_throughput = 1000 * (double)(cur_nr_entry - prev_nr_entry) / duration;
 		double progress = (double) cur_nr_entry / nr_entry;
-		printf("populating progress: %.2f, insert throughput: %.2f\n", progress * 100, cur_insert_throughput);
+		printf("populating progress: %.1f%%, insert throughput: %.2f ops/sec\n", progress * 100, cur_insert_throughput);
 		prev_nr_entry = cur_nr_entry;
 		prev_check_time = cur_check_time;
 
@@ -269,7 +269,7 @@ int main(int argc, char *argv[]) {
 		long duration = duration_cast<milliseconds>(cur_visit_time - prev_visit_time).count();
 		double cur_read_throughput = 1000 * (double)(cur_nr_read - prev_nr_read) / duration;
 		double cur_write_throughput = 1000 * (double)(cur_nr_write - prev_nr_write) / duration;
-		printf("Read Throughput: %.2lf op/sec, Write Throughput: %.2lf op/sec, Total Throughput: %.2lf op/sec\n",
+		printf("Read Throughput: %.2lf ops/sec, Write Throughput: %.2lf ops/sec, Total Throughput: %.2lf ops/sec\n",
 		       cur_read_throughput, cur_write_throughput, cur_read_throughput + cur_write_throughput);
 
 		prev_nr_read = cur_nr_read;
@@ -291,6 +291,6 @@ int main(int argc, char *argv[]) {
 		read_throughput += 1000 * (double)context->nr_read / duration;
 		write_throughput += 1000 * (double)context->nr_write / duration;
 	}
-	printf("Overall Read Throughput: %.2lf op/sec, Overall Write Throughput: %.2lf op/sec, Overall Total Throughput: %.2lf op/sec\n",
+	printf("Overall Read Throughput: %.2lf ops/sec, Overall Write Throughput: %.2lf ops/sec, Overall Total Throughput: %.2lf ops/sec\n",
 	       read_throughput, write_throughput, read_throughput + write_throughput);
 }
