@@ -23,7 +23,7 @@ enum thread_type {
 };
 
 struct thread_context {
-	thread thread;
+	thread thread_v;
 	thread_type type;
 	int thread_index;
 
@@ -199,10 +199,10 @@ int main(int argc, char *argv[]) {
 		context->end_key = min(nr_entry, entry_per_thread * (thread_index + 1));
 	}
 	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
-		init_context_arr[thread_index].thread = thread(init_thread_fn, &init_context_arr[thread_index]);
+		init_context_arr[thread_index].thread_v = thread(init_thread_fn, &init_context_arr[thread_index]);
 	}
 	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
-		init_context_arr[thread_index].thread.join();
+		init_context_arr[thread_index].thread_v.join();
 	}
 	printf("database populated\n");
 
@@ -223,13 +223,13 @@ int main(int argc, char *argv[]) {
 		context->nr_write = 0;
 	}
 	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
-		workload_context_arr[thread_index].thread = thread(workload_thread_fn, &workload_context_arr[thread_index]);
+		workload_context_arr[thread_index].thread_v = thread(workload_thread_fn, &workload_context_arr[thread_index]);
 	}
 	double read_throughput = 0;
 	double write_throughput = 0;
 	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
 		struct workload_thread_context *context = &workload_context_arr[thread_index];
-		context->thread.join();
+		context->thread_v.join();
 		long duration = duration_cast<milliseconds>(context->end_time - context->start_time).count();
 		read_throughput += 1000 * (double)context->nr_read / duration;
 		write_throughput += 1000 * (double)context->nr_write / duration;
