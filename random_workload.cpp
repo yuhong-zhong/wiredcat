@@ -71,7 +71,7 @@ void init_thread_fn(struct init_thread_context *context) {
 	WT_SESSION *session;
 	WT_CURSOR *cursor;
 	int ret;
-	ret = context->conn->open_session(context->conn, NULL, TIGER_OPEN_SESSION_CONFIG, &session);
+	ret = context->conn->open_session(context->conn, NULL, NULL, &session);
 	if (ret != 0) {
 		printf("init thread %d open_session failed, ret: %s\n", context->thread_index, wiredtiger_strerror(ret));
 		exit(1);
