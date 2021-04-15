@@ -76,7 +76,7 @@ void init_thread_fn(struct init_thread_context *context) {
 		printf("init thread %d open_session failed, ret: %s\n", context->thread_index, wiredtiger_strerror(ret));
 		exit(1);
 	}
-	ret = session->open_cursor(session, TIGER_TABLE_NAME, NULL, NULL, &cursor);
+	ret = session->open_cursor(session, TIGER_TABLE_NAME, NULL, "bulk", &cursor);
 	if (ret != 0) {
 		printf("init thread %d open_cursor, ret: %s\n", context->thread_index, wiredtiger_strerror(ret));
 		exit(1);
@@ -188,9 +188,10 @@ int main(int argc, char *argv[]) {
 	session->close(session, NULL);
 
 	/* populate database */
-	struct init_thread_context *init_context_arr = new struct init_thread_context[nr_thread];
-	long entry_per_thread = (nr_entry + nr_thread - 1) / nr_thread;
-	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
+	int nr_init_thread = 1;
+	struct init_thread_context *init_context_arr = new struct init_thread_context[nr_init_thread];
+	long entry_per_thread = (nr_entry + nr_init_thread - 1) / nr_init_thread;
+	for (int thread_index = 0; thread_index < nr_init_thread; ++thread_index) {
 		struct init_thread_context *context = &init_context_arr[thread_index];
 		context->thread_index = thread_index;
 		context->type = INIT;
@@ -202,7 +203,7 @@ int main(int argc, char *argv[]) {
 		context->end_key = min(nr_entry, entry_per_thread * (thread_index + 1));
 		context->cur_key = context->start_key;
 	}
-	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
+	for (int thread_index = 0; thread_index < nr_init_thread; ++thread_index) {
 		init_context_arr[thread_index].thread_v = thread(init_thread_fn, &init_context_arr[thread_index]);
 	}
 	/* display real-time progress */
@@ -211,7 +212,7 @@ int main(int argc, char *argv[]) {
 	this_thread::sleep_for(chrono::seconds(1));
 	for (;;) {
 		long cur_nr_entry = 0;
-		for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
+		for (int thread_index = 0; thread_index < nr_init_thread; ++thread_index) {
 			struct init_thread_context *context = &init_context_arr[thread_index];
 			cur_nr_entry += (context->cur_key - context->start_key);
 		}
