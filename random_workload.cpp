@@ -233,6 +233,10 @@ int main(int argc, char *argv[]) {
 		}
 		this_thread::sleep_for(chrono::seconds(1));
 	}
+	for (int thread_index = 0; thread_index < nr_init_thread; ++thread_index) {
+		struct init_thread_context *context = &init_context_arr[thread_index];
+		context->thread_v.join();
+	}
 	printf("database populated\n");
 
 	/* start workload */
@@ -284,6 +288,10 @@ int main(int argc, char *argv[]) {
 		if (all_finished)
 			break;
 		this_thread::sleep_for(chrono::seconds(1));
+	}
+	for (int thread_index = 0; thread_index < nr_thread; ++thread_index) {
+		struct workload_thread_context *context = &workload_context_arr[thread_index];
+		context->thread_v.join();
 	}
 
 	/* display overall perf */
