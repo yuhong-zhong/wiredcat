@@ -234,6 +234,6 @@ int main(int argc, char *argv[]) {
 		read_throughput += 1000 * (double)context->nr_read / duration;
 		write_throughput += 1000 * (double)context->nr_write / duration;
 	}
-	printf("Read Throughput: %lf, Write Throughput: %lf, Total Throughput: %lf\n",
+	printf("Read Throughput: %.2lf op/sec, Write Throughput: %.2lf op/sec, Total Throughput: %.2lf op/sec\n",
 	       read_throughput, write_throughput, read_throughput + write_throughput);
 }
