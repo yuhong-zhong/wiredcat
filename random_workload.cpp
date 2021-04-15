@@ -59,7 +59,11 @@ enum {
 	NR_OP,
 };
 
-void generate_random_string(uint8_t *buffer, int size, unsigned int *seedp) {
+void get_key_string(char *buffer, long key) {
+	sprintf(buffer, "%016ld", key);
+}
+
+void get_random_string(char *buffer, int size, unsigned int *seedp) {
 	for (int i = 0; i < size - 1; ++i) {
 		buffer[i] = 'a' + (rand_r(seedp) % ('z' - 'a' + 1));
 	}
@@ -87,8 +91,8 @@ void init_thread_fn(struct init_thread_context *context) {
 	char *key_buffer = (char *) malloc(BUFFER_SIZE);
 	char *value_buffer = (char *) malloc(BUFFER_SIZE);
 	for (long i = context->start_key; i < context->end_key; ++i, ++context->cur_key) {
-		sprintf(key_buffer, "%ld", i);
-		generate_random_string((uint8_t *) value_buffer, context->value_size, &seed);
+		get_key_string(key_buffer, i);
+		get_random_string(value_buffer, context->value_size, &seed);
 		cursor->set_key(cursor, key_buffer);
 		cursor->set_value(cursor, value_buffer);
 		ret = cursor->insert(cursor);
@@ -124,7 +128,7 @@ void workload_thread_fn(struct workload_thread_context *context) {
 	for (long i = 0; i < context->nr_op; ++i) {
 		bool read = rand_r(&seed) < (int)((double)RAND_MAX * context->read_ratio);
 		long key = (((long)rand_r(&seed) << (sizeof(int) * 8)) | rand_r(&seed)) % context->nr_entry;
-		sprintf(key_buffer, "%ld", key);
+		get_key_string(key_buffer, key);
 		cursor->set_key(cursor, key_buffer);
 		if (read) {
 			ret = cursor->search(cursor);
@@ -134,7 +138,7 @@ void workload_thread_fn(struct workload_thread_context *context) {
 			}
 			++context->nr_read;
 		} else {
-			generate_random_string((uint8_t *) value_buffer, context->value_size, &seed);
+			get_random_string(value_buffer, context->value_size, &seed);
 			cursor->set_value(cursor, value_buffer);
 			ret = cursor->update(cursor);
 			if (ret != 0) {
