@@ -110,7 +110,7 @@ int main(int argc, char *argv[]) {
 	int ret;
 
 	ret = wiredtiger_open("/users/yuhong/tigerhome", NULL,
-			      "create,direct_io=[data],buffer_alignment=512B,mmap=false,"
+			      "create,direct_io=[data,checkpoint],buffer_alignment=512B,mmap=false,"
 			      "verbose=[backup,compact,compact_progress,"
 			      "log,history_store,history_store_activity,"
 			      "overflow,rebalance,rts,salvage,"  // lsm,lsm_manager,transaction
